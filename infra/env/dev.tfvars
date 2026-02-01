@@ -1,4 +1,4 @@
-project_name = "cashburn-starter-angular"
+project_name = "colinashburn"
 env          = "dev"
 location     = "centralus"
-app_url      = "cashburn-starter-angular-dev.colinashburn.com" # IMPORTANT: Update this to your domain name, or if you do not have a custom domain name, use "".
+app_url      = "dev.colinashburn.com"

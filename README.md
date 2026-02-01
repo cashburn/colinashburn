@@ -1,12 +1,12 @@
-# CashburnStarterAngular
+# ColinAshburn - Personal Brand Website
 
-A template for a monorepo Angular application with multiple environments, deployed as an Azure Static Web App using GitHub Actions and Terraform, integrating CI code coverage checks, ESLint, Prettier, and Husky for code quality and formatting.
+A personal brand website: https://colinashburn.com
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.1.
+# Starter Templates Used in this
 
-# Features
+## Angular Starter Template
 
-This starter template includes the following features:
+This uses the [cashburn-starter-angular](https://github.com/cashburn/cashburn-starter-angular) starter template for core infrastructure, CI/CD setup, and Angular project structure.
 
 ### Architecture
 
@@ -47,7 +47,7 @@ This starter template includes the following features:
 - **[GitHub repository settings](#terraform-github-repository-settings-github-settings)** managed via Terraform
 - Custom domain support configured in Terraform
 
-## Multiple Environments
+### Multiple Environments
 
 This project supports multiple deployment environments configured via GitHub Environments and Terraform:
 
@@ -91,7 +91,7 @@ The base configuration was added from another starter project, [cashburn-starter
 
 The project is hosted using Azure Static Web Apps. Configuration is deployed as part of the [Terraform Azure IaC](#terraform-azure-iac-infra) configuration, and the `/dist` folder is uploaded to the Static Web App in the `/.github/workflows/deploy-template.yml` file.
 
-# Steps to use this in your project
+# Steps to get here
 
 **Important: If you use this starter project, you MUST update these files especially!!!**
 
@@ -103,7 +103,7 @@ The project is hosted using Azure Static Web Apps. Configuration is deployed as 
 - `/infra/backend.dev.config` - You MUST use a different storage_account_name
 - `/infra/backend.prod.config` - You MUST use a different storage_account_name
 
-## Option 1 - Use the GitHub template
+## Use the GitHub template
 
 `cashburn-starter-angular` is a public template on GitHub. On the repo homepage, there should be a button on the right that says "Use this template".
 
@@ -140,78 +140,6 @@ The project is hosted using Azure Static Web Apps. Configuration is deployed as 
 5. Run `npm install`
 6. Continue to [Set up infra](#set-up-infra) section
 
-## Option 2 - Create a new repo and copy files
-
-1. Clone this repository (to copy files from later)
-2. Create a new Angular repo
-    1. `ng new myapp-starter-test --create-application=false`
-3. `ng new myapp-starter-test --create-application=false`
-4. `ng generate application @myapp/app`
-    1. Choose SCSS
-5. `ng generate library @myapp/core`
-6. `npm install --save-dev @vitest/coverage-v8 angular-eslint eslint eslint-config-prettier eslint-plugin-simple-import-sort husky lint-staged npm-run-all-next prettier typescript-eslint vitest`
-7. `ng add @angular/material`
-8. Copy files from `cashburn-starter-angular`
-    1. Copy the generic files from `cashburn-starter-angular`
-        1. .editorconfig
-        2. .gitignore
-        3. .eslint.config.js
-        4. `.vscode/`
-            1. Along with all its contents
-        5. `.husky/`
-            1. Along with at least the `pre-commit` file
-
-        ```bash
-        cp -r ../cashburn-starter-angular/.editorconfig ../cashburn-starter-angular/.gitignore ../cashburn-starter-angular/eslint.config.js ../cashburn-starter-angular/.vscode ../cashburn-starter-angular/.husky .
-        ```
-
-    2. Copy the Angular projects from `cashburn-starter-angular`
-        1. `projects/cashburn/app` -> `projects/myapp/app`
-        2. `projects/cashburn/core` -> `projects/myapp/core`
-
-        ```bash
-        cp -r ../cashburn-starter-angular/projects/cashburn/app ./projects/myapp/
-        cp -r ../cashburn-starter-angular/projects/cashburn/core ./projects/myapp/
-        ```
-
-    3. Copy the `angular.json` file from `cashburn-starter-angular` (or copy just the project configurations; we mostly need the coverage/eslint/environment file replacements)
-        1. `cp ../cashburn-starter-angular/angular.json .`
-    4. Copy the `tsconfig.json` file from `cashburn-starter-angular` (or just copy the `compilerOptions.paths` field)
-        1. `cp ../cashburn-starter-angular/tsconfig.json .`
-
-    5. Copy these sections from the `/package.json`:
-        1. `scripts`
-        2. `prettier`
-        3. `engines` - Replace this with whichever version of NodeJs you would like to use
-        4. `lint-staged`
-    6. Find and replace from `cashburn` to `myapp`. Changes should be in:
-        1. `/angular.json`
-            1. All the project names/directories
-            2. **You'll want to change the `cli.analytics` field back if you had it set in your app**
-        2. `/projects/myapp/app/src/index.html`
-            1. App Title
-        3. `/projects/myapp/app/src/app/app.config.ts`
-            1. Imports
-        4. `/projects/myapp/app/src/app/app.spec.ts`
-            1. Imports
-        5. `/projects/myapp/app/src/app/app.ts`
-            1. App Title
-        6. `/projects/myapp/app/src/app/shell/shell.spec.ts`
-            1. Imports
-        7. `/projects/myapp/app/src/app/shell/shell.ts`
-            1. Imports
-        8. `/projects/myapp/core/ng-package.json`
-            1. Destination folder
-        9. `/projects/myapp/core/package.json`
-            1. Library name
-    7. Copy `/infra`
-    8. Copy `/.github`
-        1. **Replace `cashburn` with `myapp` in `.github/workflows/deploy-template.yml`**
-    9. Copy `.vscode`
-    10. Copy `github-settings`
-    11. Run `npm run prettier:fix`
-    12. Continue to [Set up infra](#set-up-infra) section
-
 ## Set up infra
 
 1. Update `/infra` folder
@@ -225,7 +153,6 @@ The project is hosted using Azure Static Web Apps. Configuration is deployed as 
     3. AZURE_SUSCRIPTION_ID
 4. Generate GH_PAT for [cashburn-starter-tf-github-settings](https://github.com/cashburn/cashburn-starter-tf-github-settings)
     1. Add it as a GitHub Actions Repository secret
-5. Update CODEOWNERS file
 
 # Running Locally
 
@@ -240,85 +167,4 @@ The project is hosted using Azure Static Web Apps. Configuration is deployed as 
     2. The `test:ci` script runs all `tests:*` scripts instead of just running one `ng test` to allow for multiple `coverage` folders. Currently with the Angular implementation of Vitest, `ng test` for all projects will generate only one `coverage` folder for all projects, so results for one project get overwritten by the other.
     3. The `test:ci` script runs the `tests:*` scripts in series (`run-s`) instead of parallel (`run-p`) because there is currently a race condition in the Angular implementation of Vitest and coverage may not be generated intermittently when running multiple dependent projects in parallel. If this becomes a significant performance bottleneck, it could be reassessed in the future.
 
-# Project Structure
-
-```
-cashburn-starter-angular/
-├── .github/                        # GitHub Actions workflows
-├── .husky/                         # Git hooks configuration for linting/formatting
-├── .vscode/                        # VSCode workspace settings
-├── github-settings/                # Terraform for GitHub Repository Settings (see below)
-├── infra/                          # Terraform Azure IaC (see below)
-├── projects/                       # Monorepo projects
-│   └── cashburn/
-│       ├── app/                    # Main Angular application
-│       │   ├── config/             # Environment-specific config JSON files
-│       │   ├── public/             # Static assets
-│       │   └── src/
-│       │       ├── app/            # Application components, routes, config
-│       │       ├── environments/   # Angular environment files
-│       │       ├── index.html
-│       │       ├── main.ts
-│       │       └── styles.scss
-│       └── core/                   # Shared library
-│           └── src/
-│               └── lib/
-│                   └── app-config/ # App configuration service
-```
-
-# Steps to get here
-
-1. `ng new cashburn-starter-angular --create-application=false`
-    1. Select Gemini
-2. Add `.editorconfig` changes
-3. `ng add angular-eslint`
-4. Add Prettier
-    1. `npm install --save-dev prettier`
-    2. `npm install --save-dev eslint-config-prettier`
-    3. Add eslint-config-prettier to eslint.config.js
-    4. Add VSCode Prettier/ESLint extensions
-    5. Add `.vscode/settings.json`
-5. Run Prettier
-    1. Add eslint/prettier scripts to package.json
-    2. Run `npm run prettier:fix`
-6. `ng generate application @cashburn/app`
-    1. SCSS
-7. Update .gitignore
-8. Add Husky/Lint-Staged with Prettier
-9. Add `eslint-plugin-simple-import-sort`
-    1. `npm install --save-dev eslint-plugin-simple-import-sort`
-    2. Add plugin/rules to eslint.config.js
-10. Add code coverage and junit test reporting
-    1. Add `test:ci` script
-    2. `npm install --save-dev @vitest/coverage-v8`
-11. Add CI/CD from [cashburn-starter-tf](https://github.com/cashburn/cashburn-starter-tf) project
-    1. Copy `/infra` folder
-    2. Run `/infra/setup.ps1` for NPD
-    3. Add NPD env vars to GitHub Environment Variables
-    4. Run `/infra/setup.ps1` for Prod
-    5. Add Prod env vars to GitHub Prod environment
-    6. Add reviewer for Prod env
-12. Add SWA to Terraform
-13. Deploy to Azure
-14. Add Custom Domain
-    1. Set `app_url` in `*.tfvars`
-    2. In Azure, go to your newly created Static Web App and under `Custom Domains` get the TXT validation record (it should say "Validating")
-    3. In your DNS hosting platform, add a TXT record for the Azure Static Web App Custom Domain validation
-    4. Wait at least 15 mins; in Azure, the Custom Domain should now say "Validated"
-    5. In your DNS hosting platform, add a CNAME record for the subdomain (or `www`) pointing to the `{random}.azurestaticapps.net` url output in your Terraform Apply logs
-15. Add GitHub Repository Settings using [cashburn-starter-tf-github-settings](https://github.com/cashburn/cashburn-starter-tf-github-settings)
-    1. Follow all instructions:
-    2. Generate a PAT for only this repo, with:
-        1. Administration - Read & Write
-        2. Contents - Read
-    3. Add the PAT as a Repository secret
-    4. Push the changes
-16. `ng generate library @cashburn/core`
-    1. Update build script in package.json
-17. `ng generate component --project @cashburn/app shell`
-18. `ng generate component --project @cashburn/core AppConfig`
-19. Update settings.json to add eslint errors as warnings
-20. `ng add @angular/material --project @cashburn/app`
-21. Create AppConfig
-    1. `ng generate interface app-config/models/app-config --project @cashburn/core`
-    2. `ng generate service app-config/app-config`
+# Project Structure - TODO
