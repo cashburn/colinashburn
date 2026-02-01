@@ -1,0 +1,250 @@
+name: CI/CD
+
+# PR Validation: "Build/Validate"
+# Push to main: "Deploy - Dev/Test/Prod"
+# Manual Dispatch: "Deploy - {env}" or "Destroy - {env}"
+run-name: ${{(github.event_name == 'pull_request' && 'Build/Validate') || (inputs.destroy && 'Destroy') || 'Deploy' }}${{ github.event_name != 'pull_request' && (inputs.env && format(' - {0}', inputs.env) || ' - All Envs') || '' }}
+
+on:
+  push:
+    branches: ['main', 'releases/*']
+  pull_request:
+    branches: ['main', 'releases/*']
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Environment (dev, test, stage, prod)'
+        required: false
+        type: choice
+        options:
+          - '' # If no env selected, run full CI/CD workflow/deploy to all envs
+          - dev
+          - test
+          - stage
+          - prod
+      destroy:
+        description: 'Destroy infrastructure'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+  actions: read # To read workflow runs and artifacts
+  pull-requests: write # To comment on pull requests
+  checks: write # To create check runs
+
+jobs:
+  # ------------------------------------
+  # CI
+  # ------------------------------------
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    outputs:
+      coverage-matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+
+      - name: npm install
+        run: npm install
+
+      - name: Run Unit Tests
+        run: npm run test:ci
+
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: |
+            test-results/*.xml
+          show: 'all'
+        if: (!cancelled())
+
+      - name: Generate Coverage Matrix
+        id: set-matrix
+        run: |
+          cd coverage
+          # List directories, remove trailing slash, format as JSON array
+          MATRIX=$(find . -name "coverage-summary.json" -print0 | xargs -0 -r dirname | sed 's|^\./||' | jq -R -s -c 'split("\n")[:-1]')
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+      - name: Upload Coverage Artifacts
+        uses: actions/upload-artifact@v6
+        if: (!cancelled())
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: ${{ github.event_name != 'pull_request' && 60 || 1 }}
+
+      - name: Upload JUnit Test Results (currently unused)
+        uses: actions/upload-artifact@v6
+        if: (!cancelled())
+        with:
+          name: test-results
+          path: test-results/
+
+  coverage-report:
+    name: Coverage Report (${{ matrix.project }})
+    needs: test
+    runs-on: ubuntu-latest
+    if: ${{ needs.test.outputs.coverage-matrix != '[]' && needs.test.outputs.coverage-matrix != '' }}
+    strategy:
+      matrix:
+        project: ${{ fromJson(needs.test.outputs.coverage-matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Coverage Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+
+      - name: Find latest main run id
+        id: find-main-run
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get the latest main branch push run that succeeded
+          LATEST_MAIN_RUN_ID=$(gh run list --branch main --workflow ci-cd.yml --json databaseId,headBranch,event,status,conclusion --jq '.[] | select(.event!="pull_request" and .status=="completed" and .conclusion=="success") | .databaseId' | head -n 1)
+
+          if [ -n "$LATEST_MAIN_RUN_ID" ]; then
+            echo "Found main branch run ID: $LATEST_MAIN_RUN_ID"
+            echo "run-id=$LATEST_MAIN_RUN_ID" >> $GITHUB_OUTPUT
+          else
+            echo "No main branch run found"
+            echo "run-id=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download main coverage artifacts
+        if: github.event_name == 'pull_request' && steps.find-main-run.outputs.run-id != ''
+        uses: actions/download-artifact@v7
+        continue-on-error: true
+        with:
+          name: coverage
+          path: coverage-main
+          run-id: ${{ steps.find-main-run.outputs.run-id }}
+          github-token: ${{ github.token }}
+
+      - name: Check if main coverage artifacts exist
+        id: check-main-coverage
+        if: github.event_name == 'pull_request'
+        run: |
+          COMPARE_PATH="coverage-main/${{ matrix.project }}/coverage-summary.json"
+          if [ -f "$COMPARE_PATH" ]; then
+            echo "compare-path=$COMPARE_PATH" >> $GITHUB_OUTPUT
+            echo "Main coverage artifacts found for ${{ matrix.project }}"
+          else
+            echo "compare-path=" >> $GITHUB_OUTPUT
+            echo "Main coverage artifacts not found for ${{ matrix.project }}, continuing without compare path"
+          fi
+
+      - name: Coverage Report
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          name: ${{ matrix.project }}
+          json-summary-compare-path: ${{ steps.check-main-coverage.outputs.compare-path }}
+          file-coverage-mode: ${{(github.event_name == 'pull_request' && 'changes') || 'all'}}
+          json-summary-path: ./coverage/${{ matrix.project }}/coverage-summary.json
+          json-final-path: ./coverage/${{ matrix.project }}/coverage-final.json
+          threshold-icons: "{0: '🔴', 60: '🟠', 80: '🟢'}"
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+
+      - name: npm install
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish build artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist
+          path: dist
+
+  tf-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.14.x'
+      - name: Terraform init
+        run: terraform init -backend=false
+        working-directory: infra
+      - name: Terraform validate
+        run: terraform validate
+        working-directory: infra
+      - name: Terraform fmt check
+        if: ${{ github.event_name == 'pull_request' }}
+        run: terraform fmt -check -recursive
+        working-directory: infra
+
+  # ------------------------------------
+  # CD
+  # ------------------------------------
+  # Check if all validations have passed
+  gate:
+    name: Deployment Gate
+    needs: [tf-validate, build, test, coverage-report]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment Gate
+        run: echo "Deployment gate passed."
+
+  # Full CI/CD Deployment is triggered if it is CI trigger (main branch) or a manual dispatch for all envs (no env selected)
+  cd-gate:
+    name: CD (all envs)
+    needs: [gate]
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.env == '') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment Gate
+        run: echo "Deployment gate passed."
+
+  # Deploy/Destroy on workflow_dispatch to selected environment only
+  deploy:
+    name: Deploy ${{inputs.env}}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.env != '' }}
+    needs: [gate]
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      env: ${{ inputs.env }}
+      destroy: ${{ inputs.destroy }}
+
+  # Normal CD flow for all environments
+  dev-deploy:
+    name: Dev - Deploy
+    needs: [cd-gate]
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      env: dev
+
+  prod-deploy:
+    name: Prod - Deploy
+    needs: [dev-deploy]
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      env: prod

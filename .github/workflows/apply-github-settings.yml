@@ -1,0 +1,65 @@
+name: Apply GitHub Repository Settings
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - github-settings/**
+      - .github/workflows/apply-github-settings.yml
+
+permissions:
+  contents: read
+
+jobs:
+  github-settings:
+    runs-on: ubuntu-latest
+    env:
+      GH_APP_ID: ${{ secrets.GH_APP_ID }}
+      GH_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        if: env.GH_APP_ID != '' && env.GH_APP_PRIVATE_KEY != ''
+        with:
+          app-id: ${{ env.GH_APP_ID }}
+          private-key: ${{ env.GH_APP_PRIVATE_KEY }}
+
+      - name: Set Terraform Token
+        run: |
+          if [ -n "${{ steps.app-token.outputs.token }}" ]; then
+            echo "TF_VAR_github_token=${{ steps.app-token.outputs.token }}" >> $GITHUB_ENV
+          else
+            echo "TF_VAR_github_token=${{ secrets.GH_PAT }}" >> $GITHUB_ENV
+          fi
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Extract Repository Metadata
+        run: |
+          FULL_REPO="${{ github.repository }}"
+          OWNER="${{ github.repository_owner }}"
+          REPO_NAME="${FULL_REPO/$OWNER\//}"
+          echo "TF_VAR_repository_name=$REPO_NAME" >> $GITHUB_ENV
+          echo "TF_VAR_github_owner=$OWNER" >> $GITHUB_ENV
+
+      - name: Terraform Init
+        working-directory: github-settings
+        run: terraform init
+
+      - name: Terraform Import Repo
+        run: terraform import github_repository.repo $TF_VAR_repository_name
+        working-directory: github-settings
+
+      - name: Terraform Plan
+        working-directory: github-settings
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: github-settings
+        run: terraform apply "tfplan"

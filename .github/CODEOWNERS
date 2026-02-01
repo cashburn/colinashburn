@@ -1,0 +1,6 @@
+# Set the code owners to Admin teams for the repository settings,
+# to prevent unauthorized repository settings changes.
+
+# This is just an example of one user as code owner:
+/github-settings/* @cashburn
+/.github/* @cashburn

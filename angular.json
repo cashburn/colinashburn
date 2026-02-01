@@ -1,0 +1,141 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": {
+    "packageManager": "npm",
+    "analytics": "c92a5434-cfbe-4362-9a4b-fdb2b71ab7ef",
+    "schematicCollections": ["angular-eslint"]
+  },
+  "newProjectRoot": "projects",
+  "projects": {
+    "@cashburn/app": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "projects/cashburn/app",
+      "sourceRoot": "projects/cashburn/app/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "projects/cashburn/app/src/main.ts",
+            "tsConfig": "projects/cashburn/app/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/cashburn/app/public"
+              },
+              {
+                "glob": "**/*",
+                "input": "projects/cashburn/app/config",
+                "output": "/config"
+              }
+            ],
+            "styles": ["projects/cashburn/app/src/styles.scss"]
+          },
+          "configurations": {
+            "production": {
+              "fileReplacements": [
+                {
+                  "replace": "projects/cashburn/app/src/environments/environment.ts",
+                  "with": "projects/cashburn/app/src/environments/environment.prod.ts"
+                }
+              ],
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "@cashburn/app:build:production"
+            },
+            "development": {
+              "buildTarget": "@cashburn/app:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "coverageInclude": ["projects/cashburn/app/**/*.ts"],
+            "coverageExclude": ["*.mock.ts"]
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/cashburn/app/**/*.ts",
+              "projects/cashburn/app/**/*.html"
+            ],
+            "eslintConfig": "projects/cashburn/app/eslint.config.js"
+          }
+        }
+      }
+    },
+    "@cashburn/core": {
+      "projectType": "library",
+      "root": "projects/cashburn/core",
+      "sourceRoot": "projects/cashburn/core/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/cashburn/core/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/cashburn/core/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/cashburn/core/tsconfig.spec.json",
+            "coverageInclude": ["projects/cashburn/core/**/*.ts"],
+            "coverageExclude": ["*.mock.ts"]
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/cashburn/core/**/*.ts",
+              "projects/cashburn/core/**/*.html"
+            ],
+            "eslintConfig": "projects/cashburn/core/eslint.config.js"
+          }
+        }
+      }
+    }
+  }
+}
